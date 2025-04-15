@@ -1,0 +1,7 @@
+# Core packages
+flask
+flask-cors
+python-dotenv
+google-genai
+groq
+gunicorn

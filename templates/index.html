@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Models API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .model-section {
+            margin-bottom: 40px;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+            min-height: 100px;
+            white-space: pre-wrap;
+        }
+        .loading {
+            color: #777;
+            font-style: italic;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .examples {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .example-prompt {
+            cursor: pointer;
+            color: #0066cc;
+            margin-right: 10px;
+        }
+        .example-prompt:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Models API</h1>
+    
+    <div class="status" id="apiStatus">Checking API status...</div>
+    
+    <div class="model-section">
+        <h2>Google Gemini</h2>
+        <textarea id="geminiPrompt" placeholder="Enter your prompt for Gemini...">Explain quantum computing in simple terms</textarea>
+        <div class="examples">
+            <strong>Example prompts:</strong>
+            <span class="example-prompt" onclick="setPrompt('geminiPrompt', 'Explain how neural networks learn patterns from data')">Neural Networks</span>
+            <span class="example-prompt" onclick="setPrompt('geminiPrompt', 'What is the difference between supervised and unsupervised learning?')">Supervised vs Unsupervised</span>
+            <span class="example-prompt" onclick="setPrompt('geminiPrompt', 'Explain the concept of attention mechanisms in transformer models')">Attention Mechanisms</span>
+        </div>
+        <button onclick="queryModel('gemini', 'geminiPrompt', 'geminiResponse')">Send to Gemini</button>
+        <div class="response" id="geminiResponse">Response will appear here...</div>
+    </div>
+    
+    <div class="model-section">
+        <h2>Groq LLaMA 3</h2>
+        <textarea id="llama3Prompt" placeholder="Enter your prompt for LLaMA 3...">Write a short poem about artificial intelligence</textarea>
+        <div class="examples">
+            <strong>Example prompts:</strong>
+            <span class="example-prompt" onclick="setPrompt('llama3Prompt', 'Describe the concept of overfitting in machine learning')">Overfitting</span>
+            <span class="example-prompt" onclick="setPrompt('llama3Prompt', 'What are embeddings in machine learning and how are they used?')">Embeddings</span>
+            <span class="example-prompt" onclick="setPrompt('llama3Prompt', 'How does reinforcement learning differ from other machine learning paradigms?')">Reinforcement Learning</span>
+        </div>
+        <button onclick="queryModel('llama3', 'llama3Prompt', 'llama3Response')">Send to LLaMA 3</button>
+        <div class="response" id="llama3Response">Response will appear here...</div>
+    </div>
+
+    <script>
+        // Use relative base URL to make it work on any domain (including Render)
+        const BASE_URL = '';
+        
+        // Check API status when page loads
+        window.onload = checkApiStatus;
+        
+        function checkApiStatus() {
+            fetch(`${BASE_URL}/api/status`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    let statusHtml = `✅ API Status: <strong>Online</strong> | Available endpoints: ${Object.keys(data.endpoints).join(', ')}`;
+                    
+                    // Add API key status
+                    statusHtml += "<br><strong>API Keys:</strong> ";
+                    statusHtml += data.api_keys.gemini ? "✅ Gemini " : "❌ Gemini Missing ";
+                    statusHtml += data.api_keys.groq ? "✅ Groq" : "❌ Groq Missing";
+                    
+                    document.getElementById('apiStatus').innerHTML = statusHtml;
+                    document.getElementById('apiStatus').style.backgroundColor = '#e6ffe6';
+                })
+                .catch(error => {
+                    document.getElementById('apiStatus').innerHTML = 
+                        `❌ API Status: <strong>Offline</strong> | Error: ${error.message}`;
+                    document.getElementById('apiStatus').style.backgroundColor = '#ffe6e6';
+                });
+        }
+        
+        function setPrompt(elementId, prompt) {
+            document.getElementById(elementId).value = prompt;
+        }
+        
+        function queryModel(endpoint, promptElementId, responseElementId) {
+            const prompt = document.getElementById(promptElementId).value.trim();
+            const responseElement = document.getElementById(responseElementId);
+            
+            if (!prompt) {
+                responseElement.textContent = 'Please enter a prompt first.';
+                responseElement.className = 'response error';
+                return;
+            }
+            
+            responseElement.textContent = `Loading response from ${endpoint}...`;
+            responseElement.className = 'response loading';
+            
+            fetch(`${BASE_URL}/${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: prompt })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                let responseText = data.response;
+                if (data.time_taken) {
+                    responseText += `\n\n(Response time: ${data.time_taken})`;
+                }
+                responseElement.textContent = responseText;
+                responseElement.className = 'response';
+            })
+            .catch(error => {
+                responseElement.textContent = `Error: ${error.message}`;
+                responseElement.className = 'response error';
+            });
+        }
+    </script>
+</body>
+</html>
